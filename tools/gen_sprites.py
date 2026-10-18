@@ -161,6 +161,44 @@ def make_plant():
         d.ellipse([cx+ox*S-r*S, oy*S-r*S, cx+ox*S+r*S, oy*S+r*S], fill=LEAF, outline=(70,110,60,255))
     return img
 
+# ---------- UI 图标（Kairosoft 手账风，供 4 个 HTML 卡片标题用） ----------
+def make_icon(kind, size=128):
+    """手绘风 128×128 图标：coin/rep/fan/office/team/rocket/trophy"""
+    img = Image.new("RGBA", (size,size), (0,0,0,0))
+    d = ImageDraw.Draw(img)
+    c = size//2
+    if kind=='coin':
+        d.ellipse([c-50,c-50,c+50,c+50], fill=(245,185,66,255), outline=(120,70,30,255), width=6)
+        d.ellipse([c-36,c-36,c+36,c+36], outline=(120,70,30,255), width=3)
+        d.text((c-18,c-26),'¥',font=None,fill=(120,70,30,255))
+    elif kind=='rep':
+        d.rectangle([c-44,c-44,c+44,c+44], fill=(127,176,214,255), outline=(44,62,80,255), width=6)
+        d.line([c-30,c+30,c+30,c-30], fill=(44,62,80,255), width=14)
+    elif kind=='fan':
+        # 人群
+        for ox in (-34,0,34):
+            d.ellipse([c+ox-12,c-18,c+ox+12,c+6], fill=SKIN, outline=(120,70,30,255))
+            d.rounded_rectangle([c+ox-20,c+4,c+ox+20,c+44], radius=12, fill=SHIRTS[0], outline=(120,70,30,255))
+    elif kind=='office':
+        d.rectangle([c-40,c-44,c+40,c+44], fill=(200,184,154,255), outline=(61,44,30,255), width=6)
+        for wx in (-28,-14,0,14,28):
+            for wy in (-30,-14,2,18):
+                d.rectangle([c+wx-8,c+wy-8,c+wx+8,c+wy+8], fill=(159,216,245,255), outline=(61,44,30,255))
+    elif kind=='team':
+        d.rounded_rectangle([c-44,c-20,c+44,c+44], radius=10, fill=SHIRTS[1], outline=(44,62,80,255), width=5)
+        d.ellipse([c-16,c-44,c+16,c-8], fill=SKIN, outline=(61,44,30,255))
+        d.ellipse([c-4,c-40,c+8,c-30], fill=HAIR)
+    elif kind=='rocket':
+        d.polygon([(c,c-44),(c+22,c+10),(c+14,c+44),(c-14,c+44),(c-22,c+10)], fill=(217,93,93,255), outline=(61,44,30,255), width=4)
+        d.ellipse([c-12,c-24,c+12,c-4], fill=(159,216,245,255), outline=(61,44,30,255))
+        d.polygon([(c-10,c+30),(c+10,c+30),(c,c+48)], fill=(245,185,66,255))
+    elif kind=='trophy':
+        d.rectangle([c-20,c-44,c+20,c+4], fill=(245,185,66,255), outline=(120,70,30,255), width=4)
+        d.polygon([(c-20,c-36),(c+20,c-36),(c+20,c+4),(c-20,c+4)], outline=(120,70,30,255))
+        d.rectangle([c-30,c+10,c+30,c+22], fill=(245,185,66,255), outline=(120,70,30,255), width=3)
+        d.ellipse([c-16,c+22,c+16,c+40], fill=(245,185,66,255), outline=(120,70,30,255), width=3)
+    return img
+
 def main():
     # 角色 5 色 × 4 帧
     for ci, shirt in enumerate(SHIRTS):
@@ -173,6 +211,9 @@ def main():
     # 道具
     make_desk().save(os.path.join(OUT, "desk.png"))
     make_plant().save(os.path.join(OUT, "plant.png"))
+    # UI 图标（Kairosoft 手账风，供 4 个 HTML 卡片标题 / HUD 用）
+    for kind in ["coin","rep","fan","office","team","rocket","trophy"]:
+        make_icon(kind, 128).save(os.path.join(OUT, f"icon_{kind}.png"))
     print("✓ sprites generated to", OUT)
     for f in sorted(os.listdir(OUT)):
         if f.endswith(".png"):

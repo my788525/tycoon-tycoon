@@ -188,7 +188,12 @@ function renderPanel(state){
   }
   else if(ph==='perform'){
     h+=`<div class="stageTag">📈 市场表现 · 进入下月</div>`;
-    if(state.lastResult) h+=`<div class="card mini"><div class="billRow"><span>评分</span><b>${state.lastResult.score}/10</b></div><div class="billRow"><span>首月销量</span><b>${fmtK(state.lastResult.sales)}</b></div><div class="billRow"><span>首月营收</span><b class="up">+${fmt$(state.lastResult.firstRevenue)}</b></div></div>`;
+    if(state.lastResult){
+      const L=state.lastResult;
+      const editors=(L.editorScores||[]).map(e=>`<div class="billRow"><span>${e.name}</span><b>${e.score}/10</b></div>`).join('');
+      const hoF=L.hallOfFame?'<div class="billRow"><span>荣誉</span><b class="up">⭐ 名人堂</b></div>':(L.seqFlag?'<div class="billRow"><span>续作</span><b>🏆 可出续作</b></div>':'');
+      h+=`<div class="card mini"><div class="billRow"><span>4 编辑总分</span><b class="${L.score40>=32?'up':''}">${L.score40}/40</b></div>${editors}<div class="billRow"><span>首月销量</span><b>${fmtK(L.sales)}</b></div><div class="billRow"><span>首月营收</span><b class="up">+${fmt$(L.firstRevenue)}</b></div>${hoF}</div>`;
+    }
   }
   else if(ph==='bankrupt'){
     h+=`<div class="stageTag">💸 公司破产</div><div class="tiny mut">资金耗尽且无贷款——经营终止，可查看成果卡或开新局。</div>`;

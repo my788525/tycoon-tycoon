@@ -73,6 +73,10 @@ const GAME_DOMAIN={
     {id:'tycoon',n:'游戏大亨',d:'千万资金 + 3 款游戏，你上市了',check:ENDS.tycoon},
     {id:'legend',n:'行业传奇',d:'声望 95，整个行业都认你这块招牌',check:ENDS.legend},
     {id:'star',n:'顶流 IP 厂',d:'50 万粉丝，你家 IP 全网顶流',check:ENDS.star},
+    {id:'hoF',n:'名人堂',d:'多款作品评分 ≥32 入选名人堂，可自由出续作',check:c=>{
+      // 简化判定：声望高 + 多作品（名人堂门槛的代理指标）
+      return c.rep>=88 && c.projectsShipped>=4;
+    }},
   ],
 };
 

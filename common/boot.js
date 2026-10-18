@@ -57,6 +57,13 @@
   const bSave = document.getElementById('btnSave');
   if(bSave) bSave.onclick = ()=>{ SFX.good(); save(); pushLog('💾 已存档'); };
 
+  // 出续作按钮（引擎层 sequel：需原作评分 ≥36/40）
+  const bSequel = document.getElementById('btnSequel');
+  if(bSequel) bSequel.onclick = ()=>{
+    if(game.sequel()){ SFX.fanfare(); renderPanel(state,game); }
+    else { SFX.bad(); showToast('续作需原作 ≥36/40 且未出过','bad'); }
+  };
+
   // 重置按钮
   const bReset = document.getElementById('btnReset');
   if(bReset) bReset.onclick = ()=>{

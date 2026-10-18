@@ -152,6 +152,9 @@ function develop(company, domain, proj, staffOverride){
   lift(['art'],'art',Math.round(teamFull.art*0.4));
   lift(['prod'],'content',Math.round(teamFull.prod*0.4));
   lift(['mkt'],'content',Math.round(teamFull.mkt*0.3));
+  // 团队均级（1-5）：用于残 bug 计算（原版：团队越强、debug 越快、残 bug 越少）
+  proj._teamAvg = clamp(Math.round(((teamFull.dev+teamFull.art+teamFull.prod+teamFull.mkt)/4)*2), 1, 5);
+  proj._teamFull = teamFull;
   // 资金消耗
   const devCost=Math.round((10-avgAttr)*costMult*8000*(1+(months-2)*0.05));
   const budget=company.money;
@@ -171,52 +174,61 @@ function develop(company, domain, proj, staffOverride){
   return proj;
 }
 
-/* ---------- 发行：算评分 / 销量 / 收入 ---------- */
+/* ---------- 发行：算评分 / 销量 / 收入（1:1 对齐原版） ----------
+ * 原版规则：4 位编辑各打 1–10 分，满分 40；≥32 入选名人堂；≥36 可出续作。
+ * 评分由 4 项属性 + 题材×玩法适配 + 平台适配 + 趋势 + 营销 + 士气 决定，
+ * 残 bug 会让技术编辑打低分。销量 = 评分 × 声望 × 平台市占 × 杂志报道 × 粉丝。 */
+const EDITORS = [
+  {n:'趣味编辑', attr:'gameplay'},
+  {n:'创意编辑', attr:'content'},
+  {n:'画面编辑', attr:'art'},
+  {n:'技术编辑', attr:'tech'},
+];
 function ship(company, domain, proj, marketing){
-  const c=company;
-  const p=proj;
+  const c=company, p=proj;
   const plat=domain.platform[p.platform]||domain.platform[Object.keys(domain.platform)[0]];
-  // 兼容加成（题材×玩法强配）
   const compat=domain.compat[(p.genre+'|'+p.audience)]||0;
-  // 平台-题材适配
   const aff=(domain.platformGenreAffinity[p.platform]&&domain.platformGenreAffinity[p.platform][p.genre])||0;
-  // 趋势命中
   const trendHit=(c.trend[p.genre]||0);
-  // 士气加成
   const moraleBonus=(c.morale||50)/50*0.3;
-  // 综合评分（0-10 保留一位）
-  const raw=(p.attrs.gameplay+p.attrs.art+p.attrs.tech+p.attrs.content)/4;
-  let score=raw*0.65 + compat + aff + (trendHit>0?0.5:0) + (marketing||3)*0.25 + moraleBonus - (p._months>8?0.3:0);
-  score=clamp(Math.round(score*10)/10,0,10);
-  // 粉丝基础影响首月曝光
+  const bugs=p._bugs||0;
+  // 每位编辑按自己关注的属性打分（1-10）
+  p.editorScores=EDITORS.map(ed=>{
+    let s=clamp(p.attrs[ed.attr]*0.75 + compat + aff + (trendHit>0?0.5:0) + (marketing||3)*0.25 + moraleBonus - (p._months>8?0.4:0) - (bugs>4?(ed.attr==='tech'?1.2:0.5):0), 1, 10);
+    return {name:ed.n, score:Math.round(s)};
+  });
+  // 40 分制总分（原版规则）
+  const score40=p.editorScores.reduce((a,e)=>a+e.score,0);
+  p.hallOfFame = score40>=32;
+  p.sequelEligible = score40>=36;
+  p.score40 = score40;
+  // 保留 0-10 分（旧 UI 兼容）
+  const score=score40/4;
   const fanBoost=1+Math.log10((c.fans||100)+1)*0.08;
-  // 销量（首月）
-  const reach=plat.marketShare*(1+score/10*0.8)*fanBoost;
+  // 杂志报道（高评分 + 高声望触发额外曝光）
+  const magBoost=(score40>=30&&c.rep>=60)?1.25:1.0;
+  const reach=plat.marketShare*(1+score40/40*0.8)*fanBoost*magBoost;
   const paying=domain.monetization[p.monetization].payingRate||0.15;
   let sales=Math.round(reach*1e5*paying);
   sales=Math.max(100,sales);
-  // 首月收入
   const unit=domain.monetization[p.monetization].unit||20;
   const rev=Math.round(sales*unit*plat.royaltyRate);
   c.money+=rev;
-  c.fans+=Math.round(sales*0.4);
-  c.rep=clamp(c.rep+(score-5)*0.6,0,100);
+  c.fans+=Math.round(sales*(p.hallOfFame?0.5:0.4));
+  c.rep=clamp(c.rep+(score40/4-5)*0.6 + (p.hallOfFame?2:0),0,100);
   c.projectsShipped++;
   c.peak=Math.max(c.peak,rev);
   c.totalEarn+=rev;
   p.score=score; p.sales=sales; p.firstRevenue=rev; p.reach=reach;
+  p.hallFlag=p.hallOfFame; p.seqFlag=p.sequelEligible;
   p.shipMonth=c.month;
-  // 月度衰减曲线
   p.revCurve=makeRevenueCurve(domain,p.monetization,sales,unit);
-  // 完整发行统计（供 UI 显示）
   p.shipStats={
-    score:score,
-    firstMonthSales:sales,
-    firstMonthRev:rev,
-    months:months(p._months),
-    compat:compat,
-    trendHit:trendHit,
-    fanBoost:fanBoost,
+    score:score, score40:score40, editors:p.editorScores,
+    hallOfFame:p.hallOfFame, sequelEligible:p.sequelEligible,
+    firstMonthSales:sales, firstMonthRev:rev,
+    months:p._months||0,
+    compat:compat, trendHit:trendHit, fanBoost:fanBoost, magBoost:magBoost,
     marketing:marketing||3,
   };
   return p;
@@ -355,8 +367,13 @@ function createTycoonGame(domainKey, profiles, difficulty){
     /* 阶段 2：开发（可选传 staff 覆盖） */
     develop:staffOverride=>{
       state.project=develop(company,domain,state.project,staffOverride);
+      const p=state.project;
+      p._teamAvg = Math.round((p._teamAvg||2));
+      // 残 bug（原版：开发越快、团队越弱 → 留下越多 bug）
+      const avg=(p.attrs.gameplay+p.attrs.art+p.attrs.tech+p.attrs.content)/4;
+      p._bugs = Math.max(0, Math.round((8-avg)*1.2 - p._teamAvg*0.8 + (p._months>6?2:0)));
       state.loopPhase='ship';
-      state.log.push('💻 开发完成，用时 '+state.project._months+' 个月（-'+fmt$(state.project._devCost||0)+'），准备发行。');
+      state.log.push('💻 开发完成，用时 '+p._months+' 个月（-'+fmt$(p._devCost||0)+'），残 bug '+(p._bugs||0)+' 个，准备发行。');
       return state;
     },
 
@@ -365,9 +382,43 @@ function createTycoonGame(domainKey, profiles, difficulty){
       state.project=ship(company,domain,state.project,marketing||3);
       state.loopPhase='perform';
       state.lastResult=state.project;
+      // 记录发行历史（供续作用）
+      if(!state._shipHistory) state._shipHistory=[];
+      state._shipHistory.push({id:'ship_'+state.project.shipMonth, ref:state.project});
+      if(state._shipHistory.length>8) state._shipHistory.shift();
       _performUntil=state.project.shipMonth; // perform 只执行 1 次（发行当月已算了首月）
-      state.log.push('🚀 发行！评分 '+state.project.score+'/10，首月 '+fmt$(state.project.firstRevenue)+'。');
+      const p=state.project;
+      const hoF=p.hallOfFame?' · ⭐ 名人堂':(p.seqFlag?' · 🏆 可出续作':'');
+      state.log.push('🚀 发行！4 编辑共评 '+p.score40+'/40'+hoF+'，首月 '+fmt$(p.firstRevenue)+'。');
       return state;
+    },
+
+    /* 续作（原版：≥36 分且原作仍在榜可出；续作继承额外属性） */
+    sequel:parentKey=>{
+      const list = state._shipHistory||[];
+      const src = parentKey ? (list.find(x=>x.id===parentKey)||null) : null;
+      // 未指定 parentKey → 用最近一个 eligible 的
+      const target = src || list.filter(x=>x.ref.sequelEligible && !x.ref._sequelUsed).slice(-1)[0];
+      if(!target || !target.ref.sequelEligible){
+        state.log.push('⚠️ 无法出续作：原作评分不足（需 ≥36/40）。');
+        return false;
+      }
+      const p = target.ref;
+      if(p._sequelUsed){ state.log.push('⚠️ 该作品已出过续作。'); return false; }
+      p._sequelUsed=true;
+      const seq=greenlight(company,domain,{
+        platform:p.platform, genre:p.genre,
+        audience:p.audience, monetization:p.monetization, ambition:p.ambition,
+      });
+      seq.name='「'+p.name+'」续作';
+      // 续作继承额外属性（原版：续作起始 4 项各 +2 级）
+      ['gameplay','art','tech','content'].forEach(a=>{ seq.attrs[a]=clamp(seq.attrs[a]+2,0,10); });
+      seq._isSequel=true;
+      seq._parentRef=p;
+      state.project=seq;
+      state.loopPhase='develop';
+      state.log.push('🎬 立项续作：「'+seq.name+'」（继承原作 '+p.score40+'/40 口碑，4 项各 +2）');
+      return true;
     },
 
     /* 月度推进 */
