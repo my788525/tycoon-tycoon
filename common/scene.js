@@ -65,6 +65,7 @@ const scene = (function(){
     if(!canvas) return false;
     ctx = canvas.getContext('2d');
     resize();
+    loadSprites();          // 加载本地贴图集（assets/*.png）
     window.addEventListener('resize', resize);
     requestAnimationFrame(loop);
     return true;
@@ -124,149 +125,140 @@ const scene = (function(){
     jumpT = 1;
   }
 
-  /* ---------- 像素小人绘制（贴图化：头部/身体/四肢分色 + 多帧走路 + 阴影） ---------- */
+  /* ---------- 贴图集加载 ---------- */
+  const spriteImages = {};
+  let spritesReady = false;
+  function loadSprites(){
+    // 角色站立/走路 5 色 × 4 帧 + 背景 4 档 + 道具
+    const names = [
+      ...[0,1,2,3,4].map(i=>`char_stand_${i}`),
+      ...[0,1,2,3,4].flatMap(i=>[0,1,2,3].map(f=>`char_walk_${i}_${f}`)),
+      'office_1','office_2','office_3','office_4',
+      'desk','plant',
+    ];
+    let loaded = 0, total = names.length;
+    names.forEach(n=>{
+      const img = new Image();
+      img.onload = ()=>{ spriteImages[n]=img; loaded++; if(loaded===total) spritesReady=true; };
+      img.onerror = ()=>{ loaded++; };
+      img.src = '../../assets/'+n+'.png';
+    });
+  }
   function px(x,y,w,h,color){ ctx.fillStyle=color; ctx.fillRect(Math.round(x),Math.round(y),Math.max(1,w),Math.max(1,h)); }
   function drawChar(c){
     const groundY = H - 36;
     const cx = Math.round(c.x);
     const yBase = groundY - 22 + c.y;
-    const frame = Math.floor(performance.now()/150)%4;   // 走路 4 帧
+    const frame = Math.floor(performance.now()/150)%4;
     const walk = (phase==='develop'||phase==='perform') ? frame : 0;
-    const legLift = (walk===1||walk===3)?2:0;
-    const armLift  = (walk===2||walk===4)?2:0;
 
     // 阴影（随跳跃升高而缩小）
     const shadowW = 10*(1 - Math.min(.5,Math.max(0,-c.y)/40));
     px(cx-shadowW/2, groundY-3, shadowW, 3, 'rgba(40,30,20,.25)');
 
+    // 贴图模式
+    if(spritesReady && spriteImages['char_stand_'+c.idx]){
+      const name = walk===0 ? 'char_stand_'+c.idx : 'char_walk_'+c.idx+'_'+(walk%4);
+      const img = spriteImages[name];
+      if(img){
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(img, cx-8, yBase-8, 16, 24);
+        ctx.imageSmoothingEnabled=true;
+        // 打字光标（开发阶段闪烁）
+        if(c.typing>0 && frame%2===0) px(cx+5, yBase+10, 2, 2, '#FFF8E0');
+      }
+      return;
+    }
+    // 兜底程序化像素小人
     const sx = cx, sy = yBase;
+    const legLift = (walk===1||walk===3)?2:0;
+    const armLift  = (walk===2)?2:0;
     const shirt = SHIRT[c.idx%SHIRT.length];
-    // 腿（走路摆动）
     px(sx-3, sy+12, 3, 6-legLift, PANTS);
     px(sx+1, sy+12, 3, 6+legLift, PANTS);
-    px(sx-3, sy+16-legLift, 3, 2, SHOE);   // 鞋
+    px(sx-3, sy+16-legLift, 3, 2, SHOE);
     px(sx+1, sy+16+legLift, 3, 2, SHOE);
-    // 身体（衬衫 + 领口）
     px(sx-4, sy, 8, 12, shirt);
-    px(sx-1, sy, 2, 2, SKIN);              // 领口
-    px(sx-4, sy+3, 8, 1, 'rgba(0,0,0,.12)');// 腰带
-    // 手臂（打字时抬起、走路摆动）
-    const handY = c.typing>0 ? sy+3+legLift : sy+ (4-armLift);
+    px(sx-1, sy, 2, 2, SKIN);
+    px(sx-4, sy+3, 8, 1, 'rgba(0,0,0,.12)');
+    const handY = c.typing>0 ? sy+3+legLift : sy+(4-armLift);
     px(sx-5, handY, 2, 5, shirt);
     px(sx+3, handY, 2, 5, shirt);
-    px(sx-5, handY+4, 2, 2, SKIN);          // 手
+    px(sx-5, handY+4, 2, 2, SKIN);
     px(sx+3, handY+4, 2, 2, SKIN);
-    // 头（脸 + 头发 + 眼 + 高光）
     px(sx-4, sy-9, 8, 9, SKIN);
-    px(sx-4, sy-9, 8, 3, HAIR);            // 头发
-    px(sx-3, sy-6, 1, 2, '#2A2A2A');       // 左眼
-    px(sx+2, sy-6, 1, 2, '#2A2A2A');       // 右眼
-    px(sx-4, sy-8, 1, 1, 'rgba(255,255,255,.4)'); // 高光
-    // 打字光标（开发阶段闪烁）
-    if(c.typing>0 && frame%2===0){
-      px(sx+5, sy+8, 2, 1, '#FFF8E0');
-    }
+    px(sx-4, sy-9, 8, 3, HAIR);
+    px(sx-3, sy-6, 1, 2, '#2A2A2A');
+    px(sx+2, sy-6, 1, 2, '#2A2A2A');
+    px(sx-4, sy-8, 1, 1, 'rgba(255,255,255,.4)');
+    if(c.typing>0 && frame%2===0) px(sx+5, sy+8, 2, 1, '#FFF8E0');
   }
 
   /* ---------- 场景背景绘制（贴图化：墙面/地板砖/窗户/家具/吊灯） ---------- */
   function drawScene(){
     const meta = OFFICE[tier-1];
-    // 墙面（纵向渐变 + 顶部吊灯光照）
-    const wallGrad = ctx.createLinearGradient(0,0,0,H-36);
-    wallGrad.addColorStop(0, meta.light);
-    wallGrad.addColorStop(1, meta.wall);
-    ctx.fillStyle = wallGrad;
-    ctx.fillRect(0,0,W,H-36);
-    // 墙面踢脚线
-    ctx.fillStyle='rgba(60,40,20,.18)';
-    ctx.fillRect(0,H-44,W,2);
-
-    // 地板（横向砖块纹理）
-    const floorY=H-36;
-    ctx.fillStyle=meta.floor; ctx.fillRect(0,floorY,W,36);
-    ctx.strokeStyle='rgba(60,40,20,.18)'; ctx.lineWidth=1;
-    for(let x=0;x<W;x+=26){ ctx.beginPath(); ctx.moveTo(x,floorY); ctx.lineTo(x,H); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(0,floorY+18); ctx.lineTo(W,floorY+18); ctx.stroke();
-    // 地板反光（带高光条）
-    ctx.fillStyle='rgba(255,255,255,.12)';
-    for(let x=4;x<W;x+=52){ ctx.fillRect(x,floorY+2,20,3); }
-
-    // 吊灯（大办+ 才有，带光晕）
-    if(tier>=3){
-      for(let i=0;i<tier-1;i++){
-        const lx = 60 + i*(W-120)/Math.max(1,tier-2);
-        ctx.strokeStyle='#3D2C1E'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(lx,0); ctx.lineTo(lx,16); ctx.stroke();
-        // 光晕
-        const glow=ctx.createRadialGradient(lx,22,2,lx,22,22);
-        glow.addColorStop(0,'rgba(255,240,180,.5)'); glow.addColorStop(1,'rgba(255,240,180,0)');
-        ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(lx,22,22,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#F5B942'; ctx.beginPath(); ctx.arc(lx,20,6,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#3D2C1E'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(lx,20,6,0,Math.PI*2); ctx.stroke();
-      }
+    // 贴图集模式：office_X.png 已加载 → 画整幅背景
+    const bgImg = spritesReady ? spriteImages['office_'+tier] : null;
+    if(bgImg){
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(bgImg, 0, 0, W, H);
+      ctx.imageSmoothingEnabled=true;
+    } else {
+      // 兜底程序化背景（贴图未加载完成时）
+      const wallGrad = ctx.createLinearGradient(0,0,0,H-36);
+      wallGrad.addColorStop(0, meta.light);
+      wallGrad.addColorStop(1, meta.wall);
+      ctx.fillStyle = wallGrad;
+      ctx.fillRect(0,0,W,H-36);
+      ctx.fillStyle='rgba(60,40,20,.18)';
+      ctx.fillRect(0,H-44,W,2);
+      const floorY=H-36;
+      ctx.fillStyle=meta.floor; ctx.fillRect(0,floorY,W,36);
+      ctx.strokeStyle='rgba(60,40,20,.18)'; ctx.lineWidth=1;
+      for(let x=0;x<W;x+=26){ ctx.beginPath(); ctx.moveTo(x,floorY); ctx.lineTo(x,H); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(0,floorY+18); ctx.lineTo(W,floorY+18); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,.12)';
+      for(let x=4;x<W;x+=52){ ctx.fillRect(x,floorY+2,20,3); }
     }
 
-    // 窗户（小办+ 起，窗内有蓝天+云朵+窗框十字）
-    if(tier>=2){
-      const nWin=tier-1;
-      for(let i=0;i<nWin;i++){
-        const wx=40+i*(W-80)/Math.max(1,nWin-1), wy=34, ww=44, wh=34;
-        // 玻璃（蓝天渐变）
-        const glass=ctx.createLinearGradient(wx,wy,wx,wy+wh);
-        glass.addColorStop(0,'#BFE3F5'); glass.addColorStop(1,'#7FB0D6');
-        ctx.fillStyle=glass; ctx.fillRect(wx,wy,ww,wh);
-        // 云
-        ctx.fillStyle='rgba(255,255,255,.8)';
-        ctx.beginPath(); ctx.arc(wx+12,wy+12,4,0,Math.PI*2); ctx.arc(wx+18,wy+11,5,0,Math.PI*2); ctx.arc(wx+24,wy+13,4,0,Math.PI*2); ctx.fill();
-        // 窗框
-        ctx.strokeStyle='#3D2C1E'; ctx.lineWidth=2; ctx.strokeRect(wx,wy,ww,wh);
-        ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(wx+ww/2,wy); ctx.lineTo(wx+ww/2,wy+wh); ctx.moveTo(wx,wy+wh/2); ctx.lineTo(wx+ww,wy+wh/2); ctx.stroke();
-      }
-    }
-
-    // 家具：工位/桌子（贴图化：桌面木纹+桌腿+显示器发光屏+键盘）
+    // 道具（贴图集模式画桌面 PNG + 盆栽 PNG；兜底程序化）
+    const deskImg = spritesReady ? spriteImages['desk'] : null;
+    const plantImg = spritesReady ? spriteImages['plant'] : null;
     const deskY = H - 52;
     const n = meta.desk;
     for(let i=0;i<n;i++){
       const dx = 50 + i*(W-100)/Math.max(1,n-1);
-      // 桌腿
-      ctx.fillStyle='#5C4A32';
-      ctx.fillRect(dx-11,deskY+4,3,16); ctx.fillRect(dx+8,deskY+4,3,16);
-      // 桌面（木纹渐变）
-      const deskGrad=ctx.createLinearGradient(dx-13,deskY,dx-13,deskY+5);
-      deskGrad.addColorStop(0,'#B0885C'); deskGrad.addColorStop(1,'#8B6F4E');
-      ctx.fillStyle=deskGrad; ctx.fillRect(dx-13,deskY,26,5);
-      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=1; ctx.strokeRect(dx-13,deskY,26,5);
-      // 显示器（屏发光 + 支架 + 键盘）
-      ctx.fillStyle='#2C3E50'; ctx.fillRect(dx-9,deskY-15,18,13);
-      const scr=ctx.createLinearGradient(dx-8,deskY-14,dx-8,deskY-3);
-      scr.addColorStop(0,'#9FD8F5'); scr.addColorStop(1,'#5FA8D6');
-      ctx.fillStyle=scr; ctx.fillRect(dx-8,deskY-14,16,11);
-      // 屏幕高光
-      ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(dx-7,deskY-13,5,2);
-      // 支架 + 键盘
-      ctx.fillStyle='#2C3E50'; ctx.fillRect(dx-2,deskY-2,4,2);
-      ctx.fillStyle='#4A4A4A'; ctx.fillRect(dx-7,deskY+3,14,2);
-      // 盆栽（大办+ 桌面绿植）
-      if(tier>=3 && i%2===0){
-        ctx.fillStyle='#C97B2D'; ctx.fillRect(dx+12,deskY-4,5,4);
-        ctx.fillStyle='#6B9E5A';
-        ctx.beginPath(); ctx.arc(dx+14,deskY-6,4,0,Math.PI*2); ctx.fill();
+      if(deskImg){
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(deskImg, dx-16, deskY-22, 32, 32);
+        ctx.imageSmoothingEnabled=true;
+      } else {
+        // 兜底程序化桌子
+        ctx.fillStyle='#5C4A32';
+        ctx.fillRect(dx-11,deskY+4,3,16); ctx.fillRect(dx+8,deskY+4,3,16);
+        const deskGrad=ctx.createLinearGradient(dx-13,deskY,dx-13,deskY+5);
+        deskGrad.addColorStop(0,'#B0885C'); deskGrad.addColorStop(1,'#8B6F4E');
+        ctx.fillStyle=deskGrad; ctx.fillRect(dx-13,deskY,26,5);
+        ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=1; ctx.strokeRect(dx-13,deskY,26,5);
+        ctx.fillStyle='#2C3E50'; ctx.fillRect(dx-9,deskY-15,18,13);
+        const scr=ctx.createLinearGradient(dx-8,deskY-14,dx-8,deskY-3);
+        scr.addColorStop(0,'#9FD8F5'); scr.addColorStop(1,'#5FA8D6');
+        ctx.fillStyle=scr; ctx.fillRect(dx-8,deskY-14,16,11);
+        ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillRect(dx-7,deskY-13,5,2);
+        ctx.fillStyle='#2C3E50'; ctx.fillRect(dx-2,deskY-2,4,2);
+        ctx.fillStyle='#4A4A4A'; ctx.fillRect(dx-7,deskY+3,14,2);
       }
-    }
-
-    // 墙上海报/画框（小办+ 起，总部多幅）
-    if(tier>=2){
-      const nFrame=tier;
-      for(let i=0;i<nFrame;i++){
-        const fx=W-90+i*26, fy=16;
-        ctx.fillStyle='#FFFDF7'; ctx.fillRect(fx,fy,20,26);
-        ctx.strokeStyle='#3D2C1E'; ctx.lineWidth=1.5; ctx.strokeRect(fx,fy,20,26);
-        // 画框内容（主题色块）
-        ctx.fillStyle=[SHIRT[i%SHIRT.length],'#7FB0D6','#6B9E5A','#C97B2D'][i%4];
-        ctx.fillRect(fx+4,fy+4,12,14);
-        ctx.fillStyle='rgba(255,255,255,.6)'; ctx.fillRect(fx+4,fy+4,12,4);
+      // 盆栽（大办+ 桌面绿植，贴图/兜底）
+      if(tier>=3 && i%2===0){
+        if(plantImg){
+          ctx.imageSmoothingEnabled=false;
+          ctx.drawImage(plantImg, dx+10, deskY-18, 14, 14);
+          ctx.imageSmoothingEnabled=true;
+        } else {
+          ctx.fillStyle='#C97B2D'; ctx.fillRect(dx+12,deskY-4,5,4);
+          ctx.fillStyle='#6B9E5A';
+          ctx.beginPath(); ctx.arc(dx+14,deskY-6,4,0,Math.PI*2); ctx.fill();
+        }
       }
     }
   }
