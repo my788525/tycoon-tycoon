@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>设计发展国 · Tycoon Tycoon</title>
+  <link rel="stylesheet" href="../../stylesheets/tycoon.css">
+</head>
+<body data-domain="design">
+<div id="tycoon">
+  <div class="title">
+    <div class="logo">🎨</div>
+    <div>
+      <h1>设计发展国</h1>
+      <div class="sub">Gamedev Tycoon 换皮 · 设计工作室 · 美学即生产力</div>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="item money"><div class="label">资金</div><div class="val" id="hudMoney">--</div></div>
+    <div class="item rep"><div class="label">声望</div><div class="val" id="hudRep">--</div></div>
+    <div class="item fans"><div class="label">粉丝</div><div class="val" id="hudFans">--</div></div>
+    <div class="item"><div class="label">月</div><div class="val" id="hudMonth">--</div></div>
+    <div class="item"><div class="label">士气</div><div class="val" id="hudMorale">50</div></div>
+    <div class="item"><div class="label">贷款</div><div class="val" id="hudLoan">—</div></div>
+  </div>
+
+  <div class="card" id="stageCard">
+    <div id="panelBody"></div>
+    <div class="actions">
+      <button class="btn" id="btnGreenlight">📋 立项</button>
+      <button class="btn" id="btnDevelop">💻 开发</button>
+      <button class="btn" id="btnShip">🚀 发行</button>
+      <button class="btn" id="btnNextMonth">📅 下月</button>
+    </div>
+    <button class="btn ghost" id="btnShare" style="width:100%;margin-top:8px">📤 分享成果卡</button>
+  </div>
+
+  <div class="card">
+    <div class="upgSection">
+      <h3>🏢 办公室（租/换）</h3>
+      <div id="officeBody"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="upgSection">
+      <h3>👥 团队（招聘/升级/解雇）</h3>
+      <div id="staffBody"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="upgSection">
+      <h3>⬆️ 升级 / 研究</h3>
+      <div id="upgBody"></div>
+    </div>
+  </div>
+
+  <div class="card logSection">
+    <h3>📜 经营日志</h3>
+    <div id="logBody"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn ghost" id="btnSave">💾 存档</button>
+    <button class="btn ghost" id="btnReset">🔄 开新局</button>
+  </div>
+
+  <div class="card mini" style="text-align:center;color:var(--mut);font-size:11px">
+    <a href="../../index.html" style="color:var(--ink2);text-decoration:none">← 返回主页</a>
+    &nbsp;·&nbsp; 设计发展国 v1.0 · 办公室/团队/升级/发行/事件/破产 全功能
+  </div>
+</div>
+
+<script src="../../common/engine.js"></script>
+<script src="../../common/profiles.js"></script>
+<script src="../../common/ui.js"></script>
+<script src="../../common/core-ui.js"></script>
+<script src="../../common/boot.js"></script>
+</body>
+</html>

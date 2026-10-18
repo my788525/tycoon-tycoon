@@ -1,0 +1,247 @@
+/* ============================================================================
+ * 发展国 · 2.5D 手账像素风
+ * ==========================================================================*/
+:root{
+  --bg:#FBF6EC; --bg2:#F3E9D8; --card:#FFFDF7;
+  --ink:#3D2C1E; --ink2:#6B5A48; --mut:#B4A48E;
+  --gold:#F5B942; --blue:#7FB0D6; --green:#6B9E5A; --red:#D95D5D; --pink:#F5A0A0;
+  --shadow:0 4px 0 #E8D9C0,0 8px 20px rgba(60,40,20,.1);
+  --shadow-sm:0 2px 0 #E8D9C0;
+  --radius:10px;
+  font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);overflow-x:hidden}
+
+/* ---- 纸纹理背景 ---- */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(60,40,20,.03) 30px),
+    repeating-linear-gradient(90deg,transparent,transparent 29px,rgba(60,40,20,.02) 30px);
+}
+
+/* ---- 顶层布局 ---- */
+#tycoon{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:14px 12px 48px}
+
+/* ---- 标题区 ---- */
+.title{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.title .logo{width:44px;height:44px;background:var(--gold);border:3px solid var(--ink);border-radius:10px;
+  display:grid;place-items:center;font-size:22px;box-shadow:var(--shadow-sm);transform:rotate(-4deg)}
+.title h1{font-size:22px;letter-spacing:.05em}
+.title .sub{font-size:11px;color:var(--mut)}
+
+/* ---- HUD ---- */
+.hud{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.hud .item{flex:1;min-width:80px;background:var(--card);border:3px solid var(--ink);border-radius:8px;
+  padding:8px 10px;box-shadow:var(--shadow-sm);text-align:center}
+.hud .item .label{font-size:10px;color:var(--mut);letter-spacing:.1em}
+.hud .item .val{font-size:16px;font-weight:700;color:var(--ink)}
+.hud .item.money .val{color:#C97B2D}
+.hud .item.rep .val{color:var(--green)}
+.hud .item.fans .val{color:var(--blue)}
+
+/* ---- 主卡片 ---- */
+.card{background:var(--card);border:3px solid var(--ink);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px;margin-bottom:14px;position:relative}
+.card::before{content:'';position:absolute;top:-3px;left:16px;width:40px;height:6px;
+  background:var(--ink);border-radius:3px;opacity:.3}
+.card.mini{padding:10px 14px}
+.card.danger{border-color:var(--red)}
+.card.danger::before{background:var(--red)}
+.card.good{border-color:var(--green)}
+
+/* ---- 阶段标签 ---- */
+.stageTag{display:inline-block;background:var(--gold);color:var(--ink);font-weight:700;
+  padding:4px 14px;border:2px solid var(--ink);border-radius:20px;
+  font-size:13px;margin-bottom:12px;box-shadow:var(--shadow-sm);transform:skew(-4deg)}
+.card .stageTag{transform:skew(-4deg)}
+
+/* ---- 选择行 ---- */
+.pickRow{margin-bottom:12px}
+.pickRow label{display:block;font-size:11px;font-weight:700;color:var(--ink2);
+  margin-bottom:6px;letter-spacing:.08em}
+.pickGrid{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--bg2);border:2px solid var(--ink);border-radius:6px;
+  padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .12s;box-shadow:var(--shadow-sm)}
+.chip:hover{transform:translateY(-2px)}
+.chip.on{background:var(--gold);color:var(--ink);box-shadow:0 3px 0 var(--ink)}
+.chip:active{transform:translateY(0)}
+
+/* ---- 属性滑杆 ---- */
+.attrLine{display:flex;align-items:center;gap:8px;margin:6px 0}
+.attrLine span{width:40px;font-size:12px;font-weight:600}
+.attrLine .attr{flex:1;accent-color:var(--gold);height:18px}
+.attrLine b{width:30px;text-align:center;font-size:13px}
+input[type="range"].attr{-webkit-appearance:none;height:18px;background:transparent}
+input[type="range"].attr::-webkit-slider-runnable-track{height:6px;background:var(--bg2);border-radius:3px;border:2px solid var(--ink)}
+input[type="range"].attr::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  background:var(--gold);border:3px solid var(--ink);border-radius:4px;cursor:pointer;margin-top:-8px;
+  box-shadow:0 2px 0 var(--ink)}
+input[type="range"].attr::-moz-range-track{height:6px;background:var(--bg2);border-radius:3px;border:2px solid var(--ink)}
+input[type="range"].attr::-moz-range-thumb{width:18px;height:18px;background:var(--gold);
+  border:3px solid var(--ink);border-radius:4px;cursor:pointer}
+
+/* ---- 人员滑杆 ---- */
+.staffGrid{margin:8px 0}
+.staffRow{display:flex;align-items:center;gap:8px;margin:6px 0}
+.staffRow span{width:40px;font-size:12px;font-weight:600}
+.staffRow .attr{flex:1}
+.staffRow b{width:30px;text-align:center;font-size:13px}
+
+/* ---- 发行结果 ---- */
+.billRow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(60,40,20,.12);font-size:13px}
+.billRow b{font-weight:700}
+.billRow .up{color:var(--green)}
+.billRow .down{color:var(--red)}
+
+/* ---- 升级区 ---- */
+.upgSection{margin-top:14px}
+.upgSection h3{font-size:11px;color:var(--mut);letter-spacing:.1em;margin-bottom:8px}
+.upgRow{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;
+  background:var(--bg2);border:2px solid var(--ink);border-radius:6px;margin-bottom:6px;
+  cursor:pointer;box-shadow:var(--shadow-sm);transition:all .1s;font-size:12px}
+.upgRow:hover{transform:translateX(2px)}
+.upgRow b{font-weight:700}
+.upgRow b.poor{color:var(--red)}
+.upgRow b.ok{color:var(--green)}
+
+/* ---- 按钮区 ---- */
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{flex:1;min-width:100px;background:var(--gold);border:3px solid var(--ink);border-radius:8px;
+  padding:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-sm);
+  transition:all .1s;color:var(--ink)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 5px 0 var(--ink)}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--ink)}
+.btn.ghost{background:transparent}
+.btn.big{min-width:200px;font-size:16px;padding:12px}
+.btn.danger{background:var(--red);color:#fff}
+
+/* ---- 日志 ---- */
+.logSection h3{font-size:11px;color:var(--mut);letter-spacing:.1em;margin-bottom:8px}
+#logBody{max-height:200px;overflow-y:auto}
+.logLine{font-size:12px;padding:4px 0;border-bottom:1px dashed rgba(60,40,20,.08);color:var(--ink2)}
+.logLine:nth-child(1){color:var(--ink);font-weight:600}
+
+/* ---- 结局横幅 ---- */
+.endingBanner{position:fixed;inset:0;z-index:99;background:rgba(60,40,20,.7);display:none;
+  place-items:center;backdrop-filter:blur(4px)}
+.endingBanner.show{display:grid}
+.endingBanner .inner{background:var(--card);border:4px solid var(--ink);border-radius:14px;
+  padding:28px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)}
+.endingBanner .icon{font-size:48px;margin-bottom:12px}
+.endingBanner h2{font-size:20px;margin-bottom:8px}
+.endingBanner p{font-size:13px;color:var(--ink2);margin-bottom:16px}
+
+/* ---- 分享卡弹窗 ---- */
+.shareModal{position:fixed;inset:0;z-index:100;background:rgba(60,40,20,.7);
+  display:none;place-items:center;backdrop-filter:blur(4px)}
+.shareModal.show{display:grid}
+.shareModal .inner{background:var(--card);border:4px solid var(--ink);border-radius:14px;
+  padding:20px;max-width:440px;width:92%}
+.shareModal img{width:100%;border:3px solid var(--ink);border-radius:8px}
+.shareModal .shareBtns{display:flex;gap:8px;margin-top:12px}
+.shareModal .shareBtns button{flex:1;padding:8px;border:2px solid var(--ink);border-radius:6px;
+  background:var(--bg2);cursor:pointer;font-size:13px;font-weight:600}
+
+/* ---- 金币飞动画 ---- */
+.coin-fly{position:fixed;width:28px;height:28px;background:var(--gold);
+  border:2px solid var(--ink);border-radius:50%;font-size:16px;
+  display:grid;place-items:center;z-index:200;pointer-events:none;
+  animation:coinFly .8s ease-out forwards}
+@keyframes coinFly{
+  0%{opacity:1;transform:translateY(0) scale(1)}
+  100%{opacity:0;transform:translateY(-120px) scale(.5)}
+}
+
+/* ---- 彩带雨 ---- */
+.confetti{position:fixed;width:8px;height:12px;z-index:200;pointer-events:none;
+  animation:confettiFall 1.5s ease-in forwards}
+@keyframes confettiFall{
+  0%{opacity:1;transform:translateY(0) rotate(0)}
+  100%{opacity:0;transform:translateY(100vh) rotate(720deg)}
+}
+
+/* ---- 震动反馈 ---- */
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* ---- 首页网格 ---- */
+.homeGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.homeCard{background:var(--card);border:3px solid var(--ink);border-radius:12px;
+  padding:16px;cursor:pointer;box-shadow:var(--shadow);transition:all .15s;
+  display:flex;flex-direction:column;gap:8px}
+.homeCard:hover{transform:translateY(-3px);box-shadow:0 6px 0 var(--ink)}
+.homeCard .icon{font-size:36px}
+.homeCard h2{font-size:16px}
+.homeCard p{font-size:11px;color:var(--mut);flex:1}
+.homeCard .tag{font-size:10px;background:var(--gold);padding:2px 8px;border-radius:4px;
+  border:2px solid var(--ink);width:fit-content}
+
+/* ---- 事件闪烁 ---- */
+.eventFlash{animation:eventFlash .6s}
+@keyframes eventFlash{0%{background:var(--gold)}100%{background:var(--card)}}
+
+/* ---- 办公室面板 ---- */
+.officeRow{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+  background:var(--bg2);border:2px solid var(--ink);border-radius:8px;margin-bottom:8px;
+  cursor:pointer;box-shadow:var(--shadow-sm);transition:all .1s;font-size:12px}
+.officeRow:hover{transform:translateX(2px)}
+.officeRow.on{background:var(--gold);box-shadow:0 3px 0 var(--ink)}
+.officeRow .oname{font-weight:700}
+.officeRow .odetail{font-size:10px;color:var(--ink2)}
+.officeRow .orent{font-weight:700}
+
+/* ---- 员工卡片 ---- */
+.empCard{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+  background:var(--card);border:2px solid var(--ink);border-radius:8px;margin-bottom:8px;
+  box-shadow:var(--shadow-sm)}
+.empCard .ename{font-size:12px;font-weight:700}
+.empCard .edetail{font-size:10px;color:var(--mut)}
+.empCard .emeta{display:flex;gap:12px;align-items:center}
+.empCard .lvl{background:var(--blue);color:#fff;font-size:10px;font-weight:700;
+  padding:2px 6px;border-radius:4px;border:1px solid var(--ink)}
+.empCard .mbtns{display:flex;gap:4px}
+.empCard .mbtn{font-size:10px;padding:4px 8px;border:1px solid var(--ink);border-radius:4px;
+  background:var(--bg2);cursor:pointer}
+.empCard .mbtn:hover{background:var(--gold)}
+.empCard .mbtn.del{background:var(--red);color:#fff}
+
+/* ---- 招聘按钮组 ---- */
+.hireGrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hireBtn{flex:1;min-width:70px;text-align:center;padding:8px 6px;background:var(--bg2);
+  border:2px solid var(--ink);border-radius:6px;font-size:11px;cursor:pointer;box-shadow:var(--shadow-sm)}
+.hireBtn:hover{background:var(--gold)}
+
+/* ---- 士气条 ---- */
+.moraleBar{height:14px;background:var(--bg2);border:2px solid var(--ink);border-radius:7px;
+  overflow:hidden;margin:8px 0}
+.moraleBar .fill{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));transition:width .3s}
+
+/* ---- 事件弹窗（临时浮层） ---- */
+.eventToast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:150;
+  background:var(--card);border:3px solid var(--ink);border-radius:10px;padding:12px 18px;
+  box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:90%;font-size:13px;font-weight:600;
+  opacity:0;transition:opacity .3s}
+.eventToast.show{opacity:1}
+.eventToast.good{border-color:var(--green)}
+.eventToast.bad{border-color:var(--red)}
+
+/* ---- 贷款提示 ---- */
+.loanTag{display:inline-block;background:var(--red);color:#fff;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:4px;margin-left:8px}
+
+/* ---- 趋势提示 ---- */
+.trendTag{display:inline-block;background:var(--blue);color:#fff;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:4px}
+
+/* ---- 发行统计大卡 ---- */
+.statsCard .billRow{font-size:14px}
+.statsCard .billRow .val{font-size:15px;font-weight:700}
+
+/* ---- 响应式 ---- */
+@media(max-width:480px){
+  .homeGrid{grid-template-columns:1fr}
+  .btn.big{min-width:100%}
+}
