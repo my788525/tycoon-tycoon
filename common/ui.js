@@ -19,6 +19,71 @@ const SFX={
   ship(){ this.tone(440,.1,'sine',.18,220); setTimeout(()=>this.tone(880,.14,'sine',.16),80); },
 };
 
+/* ---------- BGM 引擎（程序化循环，按阶段切换 4 种情绪） ---------- */
+const BGM={
+  ctx:null, gain:null, timer:null, current:'greenlight', step:0, playing:false,
+  _note:{
+    greenlight:[0,4,7,12,0,4,7,12,0,4,7,10,0,4,7,12],
+    develop:[0,2,4,7,4,2,0,4,7,9,12,9,7,4,2,0],
+    ship:[12,15,19,24,19,15,12,15,19,24,27,24,19,15,12,15],
+    perform:[0,0,4,0,7,0,4,0,12,0,7,0,4,0,0,0],
+    bankrupt:[0,-2,-4,-7,-4,-2,0,-2,-4,-7,-10,-7,-4,-2,0,0],
+  },
+  _root:{ greenlight:261.6, develop:329.6, ship:392.0, perform:392.0, bankrupt:220.0 },
+  _bpm:{ greenlight:120, develop:130, ship:140, perform:120, bankrupt:80 },
+  _wave:{ greenlight:'triangle', develop:'square', ship:'sine', perform:'triangle', bankrupt:'sawtooth' },
+  _vol:{ greenlight:.14, develop:.10, ship:.16, perform:.12, bankrupt:.08 },
+
+  start(phase){
+    if(this.playing){
+      // 热切换：阶段变了就更新 current，_loop 自动用新旋律
+      if(phase&&phase!==this.current){ this.current=phase; this.step=0; }
+      return;
+    }
+    this.playing=true;
+    this.current=phase||'greenlight';
+    this.step=0;
+    this._loop();
+  },
+  stop(){
+    this.playing=false;
+    if(this.timer){ clearTimeout(this.timer); this.timer=null; }
+  },
+  _loop(){
+    if(!this.playing)return;
+    if(!this.ctx){ this.ctx=SFX.ctx; }
+    if(!this.ctx){ this.timer=setTimeout(()=>this._loop(),100); return; }
+    const scale=this._note[this.current]||this._note.greenlight;
+    const root=this._root[this.current]||261.6;
+    const wave=this._wave[this.current]||'triangle';
+    const vol=this._vol[this.current]||.12;
+    const interval=60/(this._bpm[this.current]||120)*1000;
+
+    const t=this.ctx.currentTime;
+    const f=root*Math.pow(2,scale[this.step%scale.length]/12);
+    const o=this.ctx.createOscillator();
+    const g=this.ctx.createGain();
+    o.type=wave; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(.001,t+interval/1000*.9);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t); o.stop(t+interval/1000+0.05);
+    // 低音贝斯（每 4 步）
+    if(this.step%4===0){
+      const fo=this.ctx.createOscillator();
+      const fg=this.ctx.createGain();
+      fo.type='sine'; fo.frequency.setValueAtTime(root/2,t);
+      fg.gain.setValueAtTime(vol*.6,t);
+      fg.gain.exponentialRampToValueAtTime(.001,t+interval/1000*3);
+      fo.connect(fg); fg.connect(this.ctx.destination);
+      fo.start(t); fo.stop(t+interval/1000*3+.05);
+    }
+    this.step++;
+    this.timer=setTimeout(()=>this._loop(), interval);
+  },
+};
+
+
 /* ---------- 岗位名（与引擎 STAFF_ROLES 对齐，UI 显示用） ---------- */
 const STAFF_ROLES_UI=[
   {id:'dev',name:'开发',short:'开发'},
@@ -57,6 +122,22 @@ function refreshHud(c){
   UI.hud.month.textContent=c.month;
   if(UI.hud.morale)UI.hud.morale.textContent=Math.round(c.morale||50);
   if(UI.hud.loan)UI.hud.loan.textContent=(c.loan>0)?fmt$(c.loan):'—';
+  // BGM 阶段情绪切换
+  if(typeof BGM!=='undefined' && BGM.playing){ BGM.start(state.loopPhase||'greenlight'); }
+}
+
+/* ---------- 场景同步（Kairosoft 像素画板） ---------- */
+function syncScene(state){
+  if(typeof scene==='undefined')return;
+  const c=state.company, d=state.domain, p=state.project;
+  const off=c.office;
+  const tier=off?off.tier:1;
+  const progress=p&&(p._devProgress||0);
+  scene.update({
+    tier, phase: state.loopPhase,
+    progress,
+    showBar: state.loopPhase==='develop',
+  });
 }
 function fmtK(v){ v=+v||0; if(v>=1e8)return(v/1e8).toFixed(1)+'亿'; if(v>=1e4)return(v/1e4).toFixed(1)+'万'; return ''+v; }
 function pushLog(txt){
@@ -118,6 +199,7 @@ function renderPanel(state){
   renderStaff(state,game);
   renderUpgrades(state);
   refreshHud(c);
+  syncScene(state);
 }
 
 function bindPanel(state){
@@ -223,7 +305,13 @@ function bindStageButtons(state,game){
   };
   UI.btn.develop.onclick=()=>{
     if(state.loopPhase!=='develop')return;
-    SFX.ship(); game.develop(); renderPanel(state,game);
+    SFX.ship();
+    // 开发阶段进度条动画（0→100% 缓慢爬升，Kairosoft 手感）
+    if(typeof scene!=='undefined'){
+      scene.update({ tier:(state.company.office?state.company.office.tier:1), phase:'develop' });
+      scene.animateProgressTo(1, 1800);
+    }
+    setTimeout(()=>{ game.develop(); renderPanel(state,game); },1850);
   };
   UI.btn.ship.onclick=()=>{
     if(state.loopPhase!=='ship')return;
@@ -232,6 +320,7 @@ function bindStageButtons(state,game){
     game.ship(mkt);
     coinBurst(state.lastResult?.firstRevenue||0);
     confetti(18);
+    if(typeof scene!=='undefined') scene.doJump();
     renderPanel(state,game);
   };
   UI.btn.nextMonth.onclick=()=>{
@@ -244,6 +333,7 @@ function bindStageButtons(state,game){
     newLogs.forEach(l=>{
       if(l.startsWith('📈')||l.startsWith('🐛')||l.startsWith('📜')||l.startsWith('🎮')||l.startsWith('🏆')||l.startsWith('🌟')||l.startsWith('🚀')||l.startsWith('🐞')||l.startsWith('⭐')||l.startsWith('📉')||l.startsWith('🤝')||l.startsWith('🧠')||l.startsWith('🔥')||l.startsWith('📦')||l.startsWith('🤖')||l.startsWith('⚖️')||l.startsWith('💰')||l.startsWith('🎨')||l.startsWith('📋')||l.startsWith('🌸')||l.startsWith('✏️')||l.startsWith('📝')){
         showToast(l, l.includes('¥')&&l.includes('-')?'bad':(l.includes('!')?'good':''));
+        if(l.includes('-')&&typeof scene!=='undefined') scene.pulse();
       }
     });
     renderPanel(state,game);

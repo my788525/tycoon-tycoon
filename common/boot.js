@@ -15,9 +15,16 @@
   const root = document.getElementById('tycoon');
   bindUI(root);
   SFX.init(); // 创建 AudioContext（首次手势后 resume）
+  // 启动像素场景画板（车库→小办→大办→总部）
+  if(typeof scene!=='undefined'){
+    scene.bind('scene');
+    // 注入 CSS 尺寸
+    const cv = document.getElementById('scene');
+    if(cv){ cv.style.width='100%'; cv.style.height='160px'; }
+  }
 
   // 解锁音频（真实用户手势内）
-  const unlock = ()=>{ SFX.resume(); document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); };
+  const unlock = ()=>{ SFX.resume(); if(typeof BGM!=='undefined'){ BGM.start('greenlight'); } document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); };
   document.addEventListener('pointerdown',unlock,{once:true});
   document.addEventListener('keydown',unlock,{once:true});
 
