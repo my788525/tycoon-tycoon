@@ -145,9 +145,10 @@ input[type="range"].attr::-moz-range-thumb{width:18px;height:18px;background:var
 .shareModal .shareBtns button{flex:1;padding:8px;border:2px solid var(--ink);border-radius:6px;
   background:var(--bg2);cursor:pointer;font-size:13px;font-weight:600}
 
-/* ---- 场景画板（Kairosoft 像素风） ---- */
+/* ---- 场景画板（Kairosoft 像素风 · Phaser 版） ---- */
 .sceneWrap{padding:0;overflow:hidden;position:relative}
-.sceneWrap canvas{display:block;width:100%;height:160px;background:#E8F1F5;image-rendering:pixelated}
+#scene{width:100%;height:160px;position:relative}
+#scene canvas{display:block;image-rendering:pixelated}
 .sceneWrap::after{content:'';position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,.15),transparent 40%)}
 

@@ -15,12 +15,10 @@
   const root = document.getElementById('tycoon');
   bindUI(root);
   SFX.init(); // 创建 AudioContext（首次手势后 resume）
-  // 启动像素场景画板（车库→小办→大办→总部）
+  // 启动 Phaser 像素场景画板（车库→小办→大办→总部）
+  // #scene 现在是 Phaser 容器 div，Phaser 会在其内部生成 <canvas> 并自动按 4:1 缩放
   if(typeof scene!=='undefined'){
     scene.bind('scene');
-    // 注入 CSS 尺寸
-    const cv = document.getElementById('scene');
-    if(cv){ cv.style.width='100%'; cv.style.height='160px'; }
   }
 
   // 解锁音频（真实用户手势内）
